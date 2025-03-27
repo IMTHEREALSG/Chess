@@ -1,11 +1,341 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+    <title>Chess khelo</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <style>
+        /* Root and body styles */
+        :root {
+            --bg-color: #1e1e1e;
+            --primary-color: #603814;
+            --light-square: #f0d9b5;
+            --dark-square: #b58863;
+            --accent-color: #4CAF50;
+            --accent-hover: #45a049;
+            --text-color: #ffffff;
+            --warning-bg: rgba(255, 204, 0, 0.1);
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        /* Main container */
+        .game-container {
+            width: 100%;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 1rem;
+        }
+        
+        /* Responsive chess board */
+        .chessboard-container {
+            display: flex;
+            justify-content: center;
+            margin: 1rem 0;
+        }
+        
+        .chessboard {
+            display: grid;
+            grid-template-columns: repeat(8, minmax(0, 1fr));
+            grid-template-rows: repeat(8, minmax(0, 1fr));
+            width: min(100%, 500px);
+            height: min(100vw, 500px);
+            transform: rotate(0deg);
+            border: 3px solid var(--primary-color);
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+        }
+        
+        .piece.white {
+            color: #ffffff;
+            text-shadow: 0 0 3px #000000;
+        }
+
+        .piece.black {
+            color: transparent;
+            -webkit-text-stroke: 1px #000000;
+        }
+
+        .flipped {
+            transform: rotate(180deg);
+        }
+
+        .square {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .square.light {
+            background-color: var(--light-square);
+        }
+
+        .square.dark {
+            background-color: var(--dark-square);
+        }
+
+        .piece {
+            font-size: clamp(24px, 5vw, 42px);
+            cursor: pointer;
+            -webkit-font-smoothing: antialiased;
+            user-select: none;
+        }
+
+        .piece.draggable {
+            cursor: grab;
+        }
+
+        .dragging {
+            opacity: 0.5;
+        }
+
+        /* Rotate pieces for black player */
+        .flipped .piece {
+            transform: rotate(180deg);
+        }
+        
+        /* Header with logo and title */
+        .game-header {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+            background-color: rgba(0, 0, 0, 0.2);
+            border-radius: 0.5rem;
+            margin-bottom: 1rem;
+        }
+        
+        .game-header h1 {
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin: 0;
+            letter-spacing: 0.05em;
+        }
+        
+        .logo {
+            font-size: 2rem;
+            margin-right: 0.5rem;
+        }
+        
+        /* Game info panels */
+        .info-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+        
+        @media (min-width: 768px) {
+            .info-panel {
+                flex-direction: row;
+            }
+            
+            .info-panel > div {
+                flex: 1;
+            }
+        }
+        
+        /* Game status styles */
+        .status-container {
+            padding: 1rem;
+            background-color: rgba(255, 255, 255, 0.05);
+            border-radius: 0.5rem;
+            color: white;
+            text-align: center;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        
+        /* Game URL sharing styles */
+        .share-url-container {
+            padding: 1rem;
+            background-color: var(--warning-bg);
+            border: 2px dashed #ffcc00;
+            border-radius: 0.5rem;
+            color: white;
+            text-align: center;
+            display: none; /* Hidden by default */
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        
+        .share-url-container p {
+            font-weight: bold;
+            font-size: 1.1rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .share-url {
+            padding: 0.5rem;
+            background-color: rgba(0, 0, 0, 0.2);
+            border-radius: 0.25rem;
+            font-family: monospace;
+            margin: 0.5rem 0;
+            word-break: break-all;
+            font-size: 0.9rem;
+        }
+        
+        /* Button styles */
+        .button-container {
+            display: flex;
+            justify-content: center;
+            margin-top: 1rem;
+        }
+        
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 0.25rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 1rem;
+        }
+        
+        .btn-primary {
+            background-color: var(--accent-color);
+            color: white;
+        }
+        
+        .btn-primary:hover:not(:disabled) {
+            background-color: var(--accent-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+        
+        .btn-primary:disabled {
+            background-color: #808080;
+            cursor: not-allowed;
+        }
+        
+        .copy-btn {
+            padding: 0.5rem 1rem;
+            background-color: rgba(255, 255, 255, 0.1);
+            border: none;
+            border-radius: 0.25rem;
+            color: white;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 0.9rem;
+        }
+        
+        .copy-btn:hover {
+            background-color: rgba(255, 255, 255, 0.2);
+        }
+        
+        /* Animations */
+        .animate-pulse {
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        
+        /* Loading spinner */
+        .spinner {
+            border: 4px solid rgba(255, 255, 255, 0.1);
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            border-left-color: var(--accent-color);
+            display: inline-block;
+            animation: spin 1s linear infinite;
+            vertical-align: middle;
+            margin-left: 0.5rem;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* Player info */
+        .player-info {
+            margin-top: 0.5rem;
+            font-size: 1rem;
+        }
+        
+        .player-color {
+            font-weight: bold;
+        }
+        
+        .white-text {
+            color: #ffffff;
+        }
+        
+        .black-text {
+            color: #a0a0a0;
+        }
+        
+        /* Footer */
+        .game-footer {
+            margin-top: auto;
+            padding: 1rem;
+            text-align: center;
+            font-size: 0.8rem;
+            opacity: 0.7;
+        }
+    </style>
 </head>
 <body>
-    <h1>Index Page</h1>
+    <div class="game-container">
+        <!-- Header -->
+        <div class="game-header">
+            <span class="logo">♞</span>
+            <h1>Chess Khelo</h1>
+        </div>
+        
+        <!-- Info panels -->
+        <div class="info-panel">
+            <!-- Status panel -->
+            <div class="status-container">
+                <div id="status" class="text-xl font-bold mb-2">
+                    Waiting for connection...
+                    <span class="spinner"></span>
+                </div>
+                <div class="player-info">Your color: <span id="player-color" class="player-color">-</span></div>
+            </div>
+            
+            <!-- Share URL panel -->
+            <div id="share-url-container" class="share-url-container">
+                <p>📢 SHARE THIS URL WITH YOUR OPPONENT:</p>
+                <div class="share-url" id="game-url"></div>
+                <button class="copy-btn" id="copy-url-btn">Copy URL</button>
+                <p class="text-sm mt-2">Your opponent must open this link to join!</p>
+            </div>
+        </div>
+        
+        <!-- Chessboard -->
+        <div class="chessboard-container">
+            <div id="chessboard"></div>
+        </div>
+        
+        <!-- Game controls -->
+        <div class="button-container">
+            <button id="start-game" class="btn btn-primary">
+                Start Game
+            </button>
+        </div>
+    </div>
+    
+    <!-- Footer -->
+    <div class="game-footer">
+        &copy; 2025 Chess Khelo - Play Chess Online
+    </div>
+
+    <script src="https://cdn.socket.io/4.8.1/socket.io.min.js" integrity="sha384-mkQ3/7FUtcGyoppY6bz/PORYoGqOl7/aSUMn2ymDOJcapfS6PHqxhRTMh1RR0Q6+" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
+    <script src="/js/chessgame.js"></script>
 </body>
 </html>
